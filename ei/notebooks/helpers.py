@@ -61,6 +61,10 @@ def compare_runs(run1, run2):
     share of the Black vote that President Obama won in the 2012 General
     Election, by precinct. The center plot will be a scatterplot with
     each run on its own axis. The marginal histograms plot each run on its own.
+
+    Note: Different EI settings may result in slightly different numbers of precincts,
+    which will cause problems when plotting. This function is best used for comparing
+    different runs of the same EI setting.
     '''
     df1 = pd.read_csv(f"../outputs/{run1}.csv")
     df2 = pd.read_csv(f"../outputs/{run2}.csv")
@@ -102,5 +106,55 @@ def compare_runs(run1, run2):
         ax.tick_params(bottom=False)
 
 #     plt.savefig("../paper_plots/statewide_vs_county_one_phase_with_hists.png", dpi=300)
+    plt.show()
+    return
+
+def make_subplot_df(run, coc, other):
+    '''
+    This function helps to make one of the 9 subplots in Figure 4. It requires
+    the name of anEI run, the Candidate of Choice (coc), and the other candidate.
+    It returns the dataframe of the racial voting gap in each precinct.
+    '''
+    election = run.split("_")[1] + "_" + run.split("_")[2]
+    if election == "16P_President":
+        run = "preferred_16P_President"
+    df = pd.read_csv(f"../outputs/fig4_outputs/{run}.csv")
+    df = df.groupby(by="sldl358").sum()
+    minority_votes = df[f"BPOP_{coc}_votes"] + df[f"BPOP_{other}_votes"] + df[f"HPOP_{coc}_votes"] + df[f"HPOP_{other}_votes"]
+    white_votes = df[f"OPOP_{coc}_votes"] + df[f"OPOP_{other}_votes"]
+    minority_dem_votes = df[f"BPOP_{coc}_votes"] + df[f"HPOP_{coc}_votes"]
+    white_dem_votes = df[f"OPOP_{coc}_votes"] + df[f"OPOP_{coc}_votes"]
+
+    minority_dem_support = minority_dem_votes / minority_votes
+    white_dem_support = white_dem_votes / white_votes
+    racial_voting_gap = minority_dem_support - white_dem_support
+    return racial_voting_gap
+
+def make_full_f4(run_dict):
+    fig, ax = plt.subplots(3,3, figsize=(12,8))
+    bins = np.arange(-0.2,0.85,0.1)
+    bins = np.arange(-1,1, 0.2)
+
+    runs = list(run_dict.keys())
+
+    k = 0
+    for i in range(3):
+        for j in range(3):
+            df = make_subplot_df(runs[k], run_dict[runs[k]][1], run_dict[runs[k]][2])
+            title = run_dict[runs[k]][0]
+            if "Primary" in title:
+                color = "#8989fe"
+            else:
+                color = "#00a878"
+            ax[i][j].hist(df, bins=bins, color=color, edgecolor="blue")
+            ax[i][j].set_xlabel(title)
+            ax[i][j].spines['top'].set_visible(False)
+            ax[i][j].spines['right'].set_visible(False)
+            if j == 0:
+                ax[i][j].set_ylabel("# House Districts")
+            k += 1
+
+    plt.subplots_adjust(wspace=0.2, hspace=0.4)
+
     plt.show()
     return
