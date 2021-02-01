@@ -5,55 +5,37 @@ library(foreign)
 library(readr)
 library(optparse)
 
-# hacky way to get CLI: Rscript [file] addBuffer removePPs useCVAP outfile[.csv]
 args <- commandArgs(trailingOnly=TRUE)
 
-datafile <- "TX_cvap_for_EI"
-election <- args[1]
-bufferCol <- args[2] == "buffer"
-scaleVotes <- args[2] == "scaleVotes"
-scalePop <- args[2] == "scalePop"
-removeProblemPrecs <- args[3] == "noPPs"
-usingCVAP <- args[4] == "CVAP"
-outfile <- args[5]
+datafile <- "TX_data_for_Chen_EI"
+bufferCol <- args[1] == "buffer"
+scaleVotes <- args[1] == "scaleVotes"
+scalePop <- args[1] == "scalePop"
+removeProblemPrecs <- args[2] == "noPPs"
+usingCVAP <- args[3] == "CVAP"
+outfile <- args[4]
 
-print(paste("EI on election: ", election, sep=""))
 print(paste("Saving EI results to ", outfile, sep=""))
-print(paste("handling PPs by ", args[2], sep=""))
+print(paste("handling PPs by ", args[1], sep=""))
 print(paste("removeProblemPrecs is set to ", removeProblemPrecs, sep=""))
-print(paste("pop. data is ", args[4], sep=""))
+print(paste("usingCVAP is set to ", usingCVAP, sep=""))
 
-elec_dict <- vector(mode="list")
-elec_dict[['12G_President']] <- c('RomneyR_12G_President', 'ObamaD_12G_President')
-elec_dict[['14R_US_Sen']] <- c('AlameelD_14R_US_Sen', 'RogersD_14R_US_Sen')
-elec_dict[['16P_President']] <- c('JuddD_16P_President', 'De_La_FuenteD_16P_President', 'ClintonD_16P_President', 'LockeD_16P_President', 'OMalleyD_16P_President', 'SandersD_16P_President', 'WIlsonD_16P_President', 'HawesD_16P_President')
-elec_dict[['18G_Comptroller']] <- c('HegarR_18G_Comptroller', 'ChevalierD_18G_Comptroller')
-elec_dict[['18G_Governor']] <- c('AbbottR_18G_Governor', 'ValdezD_18G_Governor')
-elec_dict[['18G_Land_Comm']] <- c('BushR_18G_Land_Comm', 'SuazoD_18G_Land_Comm')
-elec_dict[['18G_Lt_Governor']] <- c('PatrickR_18G_Lt_Governor', 'CollierD_18G_Lt_Governor')
-elec_dict[['18P_Lt_Governor']] <- c('CooperD_18P_Lt_Governor', 'CollierD_18P_Lt_Governor')
-elec_dict[['16G_RR_Comm_1']] <- c('YarbroughD_16G_RR_Comm_1', 'ChristianR_16G_RR_Comm_1')
-
-candidates <- elec_dict[[election]]
 if (usingCVAP) {
-  year <- substr(election, 0, 2)
-  old_popcols <- c(paste("CVAP_20",year,sep=""), paste("BCVAP_20",year,sep=""), paste("HCVAP_20",year,sep=""))
+  old_popcols <- c("CVAP_2012", "BCVAP_2012", "HCVAP_2012")
 } else {
   old_popcols <- c("VAP", "BVAP", "HVAP")
 }
 popcols <- c("TOTPOP", "BPOP", "HPOP") # general — could refer to VAP or CVAP
 
-ntunes_val <- 10 # 10 normally # 10
-tunedraws <- 1000 # 100,000 normally # 1000
-thin_mcmc <- 100 # 100 normally # 100
-burnin_mcmc <- 1000 # 100,000 normally # 1000
-sample_mcmc <- 1000 # 1,000 normally # 1000
+ntunes_val <- 10
+tunedraws <- 1000
+thin_mcmc <- 100
+burnin_mcmc <- 1000
+sample_mcmc <- 1000
 
 wd <- getwd()
 outfilePath <- paste(wd, "/../outputs/", outfile, ".csv", sep="")
 b <- as.data.frame(read_delim(paste(wd, "/../resources/", datafile, ".csv", sep=""), col_names=T, delim=','))
-
-# change name of population columns to TOTPOP, BPOP, HPOP
 for (i in seq_along(popcols)) {
   names(b)[names(b) == old_popcols[i]] <- popcols[i]
 }
@@ -61,10 +43,9 @@ for (i in seq_along(popcols)) {
 bs <- b[b$TOTPOP > 0,] # only blocks with total pop > 0 (not necessary in Texas) actually it is, I think...
 
 # aggregate BLACK AND HISP pop and vote by VTD in each county — unnecessary using our data...
-a <- aggregate(bs[,c('TOTPOP','BPOP','HPOP',candidates)],
+a <- aggregate(bs[,c('TOTPOP','BPOP','HPOP','Obama','Romney')],
                by = list(bs$CNTYVTD),
                FUN = sum);
-# a <- bs
 
 a$OPOP <- a$TOTPOP - a$BPOP - a$HPOP
 
@@ -73,12 +54,12 @@ a$TOTPOP[is.na(a$TOTPOP)] <- 0
 a$BPOP[is.na(a$BPOP)] <- 0
 a$HPOP[is.na(a$HPOP)] <- 0
 a$OPOP[is.na(a$OPOP)] <- 0
-for (candidate in candidates) {
-  a[[candidate]][is.na(a[[candidate]])] <- 0
-  a[[candidate]] <- round(a[[candidate]])
-}
+a$Obama[is.na(a$Obama)] <- 0
+a$Romney[is.na(a$Romney)] <- 0
 
-a$totvotes <- rowSums(a[,candidates])
+a$Obama <- round(a$Obama)
+a$Romney <- round(a$Romney)
+a$totvotes <- a$Romney + a$Obama
 
 if (removeProblemPrecs) {
   a <- a[a$TOTPOP >= a$totvotes,] # remove the problem VTDs (so buffers should be only 0)
@@ -99,10 +80,9 @@ if (bufferCol) {
   # or scale votes DOWN to match POP
   a$factor <- 1
   a$factor[a$TOTPOP < a$totvotes] <- a$TOTPOP[a$TOTPOP < a$totvotes] / a$totvotes[a$TOTPOP < a$totvotes]
-  for (candidate in candidates) {
-    a[[candidate]] <- floor(a[[candidate]]*a$factor)
-  }
-  a$totvotes <- rowSums(a[,candidates])
+  a$Obama <- floor(a$Obama*a$factor)
+  a$Romney <- floor(a$Romney*a$factor);
+  a$totvotes <- a$Romney + a$Obama
 
   if (removeProblemPrecs && sum(a$factor != 1) != 0) {
     print("ERROR: We haven't removed all problem precincts! (first phase)")
@@ -130,9 +110,9 @@ a$notvotes <- a$TOTPOP - a$totvotes
 
 # identify formula: estimate vote/no vote for black, hisp, and other
 if (bufferCol) {
-  ei_formula <- paste('cbind(',paste(candidates,collapse = ', '),', notvotes) ~ cbind(BPOP, HPOP, OPOP, bufferPOP)', sep = '')
+  ei_formula <- cbind(Romney, Obama, notvotes) ~ cbind(BPOP, HPOP, OPOP, bufferPOP)
 } else {
-  ei_formula <- paste('cbind(',paste(candidates,collapse = ', '),', notvotes) ~ cbind(BPOP, HPOP, OPOP)', sep = '')
+  ei_formula <- cbind(Romney, Obama, notvotes) ~ cbind(BPOP, HPOP, OPOP)
 }
 
 tune.nocov <- tuneMD(ei_formula,
@@ -150,26 +130,53 @@ qq <-  md.out$draws$Beta
 
 # print("Made it past EI")
 
-candidates <- c(candidates, "notvotes")
-num_c <- length(candidates)
-groups <- c("BPOP", "HPOP", "OPOP")
-num_d <- 3
 if (bufferCol) {
-  groups <- c(groups, "bufferPOP")
-  num_d <- 4
-}
-
-i <- 1
-for (candidate in candidates) {
-  for (group in groups) {
-    new_row_proportions <- paste("ei", group, candidate, sep="_")
-    new_row_votes <- paste(group, candidate, "votes", sep="_")
-    product <- num_c * num_d
-    a[[new_row_proportions]] <- apply(qq[,c(product*(1:dim(a)[1])-(product-i))],2,mean)
-    bs[[new_row_votes]] <- a[[new_row_proportions]][match(bs$CNTYVTD,a$Group.1)] * a[[group]][match(bs$CNTYVTD,a$Group.1)]
-    i <- i + 1
+  # estimate vote prefs
+  if (dim(a)[1]>1) {
+    a$ei.Brom <- apply(qq[,c(12*(1:dim(a)[1])-11)],2,mean) # every 12 starting at index 1
+    a$ei.Hrom <- apply(qq[,c(12*(1:dim(a)[1])-10)],2,mean) # every 12 starting at index 2
+    a$ei.Orom <- apply(qq[,c(12*(1:dim(a)[1])-9)],2,mean) # every 12 starting at index 3
+    a$ei.Boba <- apply(qq[,c(12*(1:dim(a)[1])-7)],2,mean) # every 12 starting at index 5
+    a$ei.Hoba <- apply(qq[,c(12*(1:dim(a)[1])-6)],2,mean) # every 12 starting at index 6
+    a$ei.Ooba <- apply(qq[,c(12*(1:dim(a)[1])-5)],2,mean) # every 12 starting at index 3
+  } else {
+    a$ei.Brom <- mean(qq[,c(12*(1:dim(a)[1])-11)])
+    a$ei.Hrom <- mean(qq[,c(12*(1:dim(a)[1])-10)])
+    a$ei.Orom <- mean(qq[,c(12*(1:dim(a)[1])-9)])
+    a$ei.Boba <- mean(qq[,c(12*(1:dim(a)[1])-7)])
+    a$ei.Hoba <- mean(qq[,c(12*(1:dim(a)[1])-6)])
+    a$ei.Ooba <- mean(qq[,c(12*(1:dim(a)[1])-5)])
+  }
+} else {
+  # estimate votes pref
+  if (dim(a)[1]>1) {
+    a$ei.Brom <- apply(qq[,c(9*(1:dim(a)[1])-8)],2,mean) # every 9 starting at index 1
+    a$ei.Hrom <- apply(qq[,c(9*(1:dim(a)[1])-7)],2,mean) # every 9 starting at index 2
+    a$ei.Orom <- apply(qq[,c(9*(1:dim(a)[1])-6)],2,mean) # every 9 starting at index 3
+    a$ei.Boba <- apply(qq[,c(9*(1:dim(a)[1])-5)],2,mean) # every 9 starting at index 4
+    a$ei.Hoba <- apply(qq[,c(9*(1:dim(a)[1])-4)],2,mean) # every 9 starting at index 5
+    a$ei.Ooba <- apply(qq[,c(9*(1:dim(a)[1])-3)],2,mean) # every 9 starting at index 6
+  } else {
+    a$ei.Brom <- mean(qq[,c(9*(1:dim(a)[1])-8)])
+    a$ei.Hrom <- mean(qq[,c(9*(1:dim(a)[1])-7)])
+    a$ei.Orom <- mean(qq[,c(9*(1:dim(a)[1])-6)])
+    a$ei.Boba <- mean(qq[,c(9*(1:dim(a)[1])-5)])
+    a$ei.Hoba <- mean(qq[,c(9*(1:dim(a)[1])-4)])
+    a$ei.Ooba <- mean(qq[,c(9*(1:dim(a)[1])-3)])
   }
 }
 
+# get votes
+bs$BRvotes <- a$ei.Brom[match(bs$CNTYVTD,a$Group.1)] * a$BPOP[match(bs$CNTYVTD,a$Group.1)]
+bs$HRvotes <- a$ei.Hrom[match(bs$CNTYVTD,a$Group.1)] * a$HPOP[match(bs$CNTYVTD,a$Group.1)]
+bs$ORvotes <- a$ei.Orom[match(bs$CNTYVTD,a$Group.1)] * a$OPOP[match(bs$CNTYVTD,a$Group.1)]
+bs$BDvotes <- a$ei.Boba[match(bs$CNTYVTD,a$Group.1)] * a$BPOP[match(bs$CNTYVTD,a$Group.1)]
+bs$HDvotes <- a$ei.Hoba[match(bs$CNTYVTD,a$Group.1)] * a$HPOP[match(bs$CNTYVTD,a$Group.1)]
+bs$ODvotes <- a$ei.Ooba[match(bs$CNTYVTD,a$Group.1)] * a$OPOP[match(bs$CNTYVTD,a$Group.1)]
+
+# get turnout
+bs$bvotes <- bs$BRvotes + bs$BDvotes
+bs$hvotes <- bs$HRvotes + bs$HDvotes
+bs$ovotes <- bs$ORvotes + bs$ODvotes
 
 write.table(bs, outfilePath, row.names = F, col.names = (!file.exists(outfilePath)), append = file.exists(outfilePath), sep=',')

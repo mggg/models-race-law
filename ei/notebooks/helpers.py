@@ -105,25 +105,23 @@ def compare_runs(run1, run2):
         ax.tick_params(top=False)
         ax.tick_params(bottom=False)
 
-#     plt.savefig("../paper_plots/statewide_vs_county_one_phase_with_hists.png", dpi=300)
+#     plt.savefig("../outputs/statewide_vs_county_one_phase_with_hists.png", dpi=300)
     plt.show()
     return
 
 def make_subplot_df(run, coc, other):
     '''
     This function helps to make one of the 9 subplots in Figure 4. It requires
-    the name of anEI run, the Candidate of Choice (coc), and the other candidate.
+    the name of an EI run, the Candidate of Choice (coc), and the other candidate.
     It returns the dataframe of the racial voting gap in each precinct.
     '''
     election = run.split("_")[1] + "_" + run.split("_")[2]
-    if election == "16P_President":
-        run = "preferred_16P_President"
     df = pd.read_csv(f"../outputs/fig4_outputs/{run}.csv")
     df = df.groupby(by="sldl358").sum()
     minority_votes = df[f"BPOP_{coc}_votes"] + df[f"BPOP_{other}_votes"] + df[f"HPOP_{coc}_votes"] + df[f"HPOP_{other}_votes"]
     white_votes = df[f"OPOP_{coc}_votes"] + df[f"OPOP_{other}_votes"]
     minority_dem_votes = df[f"BPOP_{coc}_votes"] + df[f"HPOP_{coc}_votes"]
-    white_dem_votes = df[f"OPOP_{coc}_votes"] + df[f"OPOP_{coc}_votes"]
+    white_dem_votes = df[f"OPOP_{coc}_votes"]
 
     minority_dem_support = minority_dem_votes / minority_votes
     white_dem_support = white_dem_votes / white_votes
@@ -131,9 +129,12 @@ def make_subplot_df(run, coc, other):
     return racial_voting_gap
 
 def make_full_f4(run_dict):
+    '''
+    This function uses `make_subplot_df()` to set up and style the 3x3 subplot figure,
+    Figure 4 in the Response. 
+    '''
     fig, ax = plt.subplots(3,3, figsize=(12,8))
     bins = np.arange(-0.2,0.85,0.1)
-    bins = np.arange(-1,1, 0.2)
 
     runs = list(run_dict.keys())
 
