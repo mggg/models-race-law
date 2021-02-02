@@ -5,7 +5,6 @@ library(foreign)
 library(readr)
 library(optparse)
 
-# hacky way to get CLI: Rscript [file] addBuffer removePPs useCVAP outfile[.csv]
 args <- commandArgs(trailingOnly=TRUE)
 
 datafile <- "TX_data_for_Chen_EI"
@@ -28,11 +27,11 @@ if (usingCVAP) {
 }
 popcols <- c("TOTPOP", "BPOP", "HPOP") # general — could refer to VAP or CVAP
 
-ntunes_val <- 10 # 10 normally
-tunedraws <- 1000 # 100,000 normally
-thin_mcmc <- 100 # 100 normally
-burnin_mcmc <- 1000 # 100,000 normally
-sample_mcmc <- 1000 # 1,000 normally
+ntunes_val <- 10
+tunedraws <- 1000
+thin_mcmc <- 100
+burnin_mcmc <- 1000
+sample_mcmc <- 1000
 
 wd <- getwd()
 outfilePath <- paste(wd, "/../outputs/", outfile, ".csv", sep="")
