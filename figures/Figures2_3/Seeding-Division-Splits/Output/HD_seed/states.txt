@@ -1,0 +1,26 @@
+AL: ERROR
+AZ: 10/15 (10) --- splits/counties (enacted splits) --- NOT BETTER THAN ENACTED
+AR: 52/75 (62) --- splits/counties (enacted splits)
+CA: ERROR
+DE: 3/3 (3) --- splits/counties (enacted splits) --- NOT BETTER THAN ENACTED
+FL: ERROR
+GA: 65/159 (73) --- splits/counties (enacted splits)
+IL: 34/102 (46) --- splits/counties (enacted splits)
+LA: 44/64 (47) --- splits/counties (enacted splits)
+MD: ERROR
+MS: 66/82 (69) --- splits/counties (enacted splits)
+NV: 5/17 (5) --- splits/counties (enacted splits) --- NOT BETTER THAN ENACTED
+NJ: 18/21 (18) --- splits/counties (enacted splits) --- NOT BETTER THAN ENACTED
+NM: 19/33 (24) --- splits/counties (enacted splits)
+NY: ERROR
+NC: 50/100 (49) --- splits/counties (enacted splits) --- NOT BETTER THAN ENACTED
+SC: 36/46 (37) --- splits/counties (enacted splits)
+TN: 43/95 (36) --- splits/counties (enacted splits) --- NOT BETTER THAN ENACTED
+TX: 46/254 (24) --- splits/counties (enacted splits) --- NOT BETTER THAN ENACTED
+VA: 56/134 (59) --- splits/counties (enacted splits)
+AZ: ERROR
+NV: ERROR
+NJ: ERROR
+NC: ERROR
+TN: ERROR
+TX: ERROR
